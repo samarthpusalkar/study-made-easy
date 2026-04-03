@@ -25,7 +25,8 @@ export const CONFIG = {
 
   // Content processing
   content: {
-    maxChunkTokens: 2000, // Reduced to force more granular slides without skipping
+    targetSectionTokens: 350,
+    maxChunkTokens: 700,
     maxDocumentPages: 1000,
     maxDocumentTokens: 500000,
   },

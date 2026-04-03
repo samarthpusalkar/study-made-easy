@@ -121,6 +121,8 @@ async function parsePDF(file) {
  */
 function splitIntoSections(text) {
   const sections = [];
+  const targetTokens = CONFIG.content.targetSectionTokens || CONFIG.content.maxChunkTokens;
+  const maxChunkTokens = CONFIG.content.maxChunkTokens;
 
   // Try to split by markdown headings first
   const headingPattern = /^#{1,3}\s+(.+)$/gm;
@@ -136,8 +138,7 @@ function splitIntoSections(text) {
       const content = sectionText.replace(/^#{1,3}\s+.+\n*/, '').trim();
 
       if (content.length > 20) {
-        // Chunk if too large
-        const chunks = chunkText(content, CONFIG.content.maxChunkTokens);
+        const chunks = chunkTextSmart(content, targetTokens, maxChunkTokens);
         chunks.forEach((chunk, ci) => {
           sections.push({
             section_title: chunks.length > 1 ? `${title} (${ci + 1}/${chunks.length})` : title,
@@ -156,7 +157,7 @@ function splitIntoSections(text) {
 
     if (paragraphs.length === 0) {
       // Just chunk the whole thing
-      const chunks = chunkText(text, CONFIG.content.maxChunkTokens);
+      const chunks = chunkTextSmart(text, targetTokens, maxChunkTokens);
       chunks.forEach((chunk, i) => {
         sections.push({
           section_title: `Section ${i + 1}`,
@@ -172,9 +173,8 @@ function splitIntoSections(text) {
       for (const para of paragraphs) {
         const paraTokens = para.split(/\s+/).length;
 
-        if (paraTokens > CONFIG.content.maxChunkTokens) {
-          // If the single paragraph is larger than maxChunkTokens, chunk it
-          // First, flush the current section if it has content
+        if (paraTokens > maxChunkTokens) {
+          // Flush the current section, then chunk oversized paragraphs smartly.
           if (currentSection.content) {
             sections.push({
               section_title: currentSection.title || `Section ${sectionNum}`,
@@ -184,8 +184,8 @@ function splitIntoSections(text) {
             sectionNum++;
             currentSection = { title: '', content: '', tokens: 0 };
           }
-          
-          const chunks = chunkText(para, CONFIG.content.maxChunkTokens);
+
+          const chunks = chunkTextSmart(para, targetTokens, maxChunkTokens);
           let candidateTitle = '';
           const firstLine = para.split('\n')[0];
           if (firstLine.length < 80) {
@@ -205,7 +205,7 @@ function splitIntoSections(text) {
           });
           sectionNum++;
         } else {
-          if (currentSection.tokens + paraTokens > CONFIG.content.maxChunkTokens && currentSection.content) {
+          if (currentSection.tokens + paraTokens > targetTokens && currentSection.content) {
             sections.push({
               section_title: currentSection.title || `Section ${sectionNum}`,
               content: currentSection.content.trim(),
@@ -243,10 +243,63 @@ function splitIntoSections(text) {
 }
 
 /**
- * Chunk text into pieces of maxTokens
+ * Chunk text into slide-sized pieces, preferring paragraph/sentence boundaries.
  */
-function chunkText(text, maxTokens) {
-  const words = text.split(/\s+/);
+function chunkTextSmart(text, targetTokens, maxTokens) {
+  const blocks = text
+    .split(/\n\s*\n/)
+    .flatMap((paragraph) => splitParagraphIntoBlocks(paragraph))
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  const chunks = [];
+  let currentChunk = [];
+  let currentTokens = 0;
+
+  const flushCurrentChunk = () => {
+    if (currentChunk.length === 0) return;
+    chunks.push(currentChunk.join(' ').trim());
+    currentChunk = [];
+    currentTokens = 0;
+  };
+
+  for (const block of blocks) {
+    const blockTokens = countTokens(block);
+
+    if (blockTokens > maxTokens) {
+      flushCurrentChunk();
+
+      const words = block.split(/\s+/);
+      for (let i = 0; i < words.length; i += maxTokens) {
+        chunks.push(words.slice(i, i + maxTokens).join(' '));
+      }
+      continue;
+    }
+
+    if (currentTokens + blockTokens > targetTokens && currentChunk.length > 0) {
+      flushCurrentChunk();
+    }
+
+    currentChunk.push(block);
+    currentTokens += blockTokens;
+  }
+
+  flushCurrentChunk();
+
+  return chunks.length > 0 ? chunks : chunkTextByWords(text, maxTokens);
+}
+
+function splitParagraphIntoBlocks(paragraph) {
+  const sentenceLikeBlocks = paragraph
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9"'`(])/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  return sentenceLikeBlocks.length > 0 ? sentenceLikeBlocks : [paragraph];
+}
+
+function chunkTextByWords(text, maxTokens) {
+  const words = text.split(/\s+/).filter(Boolean);
   const chunks = [];
 
   for (let i = 0; i < words.length; i += maxTokens) {
@@ -254,4 +307,8 @@ function chunkText(text, maxTokens) {
   }
 
   return chunks;
+}
+
+function countTokens(text) {
+  return text.split(/\s+/).filter(Boolean).length;
 }
