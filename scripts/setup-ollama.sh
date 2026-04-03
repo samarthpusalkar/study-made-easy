@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEFAULT_MODEL="mistral"
+DEFAULT_MODEL="openvoid/Void-Gemini"
 OLLAMA_TARGET="${OLLAMA_PROXY_TARGET:-http://localhost:11434}"
 
 log() {

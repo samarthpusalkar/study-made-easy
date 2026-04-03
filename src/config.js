@@ -1,5 +1,5 @@
 const DEFAULT_OLLAMA_BASE_URL = (import.meta.env.VITE_OLLAMA_BASE_URL || '/api/ollama').replace(/\/$/, '');
-const DEFAULT_OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || 'mistral';
+const DEFAULT_OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || 'openvoid/Void-Gemini';
 
 // ESA Configuration
 export const CONFIG = {

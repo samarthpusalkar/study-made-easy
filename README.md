@@ -54,14 +54,14 @@ That setup script:
 If you prefer doing it manually:
 
 ```bash
-ollama pull mistral
+ollama pull openvoid/Void-Gemini
 ollama serve
 ```
 
 Windows note:
 
 - install Ollama from the official Windows download page
-- then run `ollama pull mistral`
+- then run `ollama pull openvoid/Void-Gemini`
 - then start the Ollama app or background service
 
 ### 3. Configure the app
@@ -74,7 +74,7 @@ cp .env.example .env.local
 
 Default values:
 
-- `VITE_OLLAMA_MODEL=mistral`
+- `VITE_OLLAMA_MODEL=openvoid/Void-Gemini`
 - `VITE_OLLAMA_BASE_URL=/api/ollama`
 - `OLLAMA_PROXY_TARGET=http://localhost:11434`
 
@@ -127,7 +127,7 @@ If you want other people to run it locally:
 
 - they need Node.js
 - they need Ollama
-- they need an installed model such as `mistral`
+- they need an installed model such as `openvoid/Void-Gemini`
 - they do not need any paid API key
 
 If you want to host it publicly:
@@ -153,7 +153,7 @@ Check that:
 Pull the configured model:
 
 ```bash
-ollama pull mistral
+ollama pull openvoid/Void-Gemini
 ```
 
 Or update `VITE_OLLAMA_MODEL` in `.env.local`.
