@@ -8,7 +8,7 @@ export default function AudioControls({ currentSlide, slides }) {
     isPaused: false,
     speed: CONFIG.tts.defaultSpeed,
   });
-  const [autoPlay, setAutoPlay] = useState(false);
+  const [autoPlay, setAutoPlay] = useState(true);
 
   useEffect(() => {
     ttsService.onStateChange = setTtsState;
@@ -101,12 +101,20 @@ export default function AudioControls({ currentSlide, slides }) {
 
         {/* Auto-play toggle */}
         <button
-          className={`audio-btn audio-btn--auto ${autoPlay ? 'audio-btn--active' : ''}`}
+          className={`audio-btn audio-btn--mode ${autoPlay ? 'audio-btn--active' : ''}`}
           onClick={() => setAutoPlay(!autoPlay)}
-          title={autoPlay ? 'Disable auto-narration' : 'Enable auto-narration'}
+          title={
+            autoPlay
+              ? 'Narration starts automatically on each slide. Click to switch to manual mode.'
+              : 'Narration starts only when you press play. Click to switch to auto mode.'
+          }
         >
-          {autoPlay ? '🔄' : '🔁'}
-          <span className="audio-btn-label">Auto</span>
+          <span className="audio-mode-icon" aria-hidden="true">
+            {autoPlay ? '🔊' : '▶'}
+          </span>
+          <span className="audio-mode-label">
+            {autoPlay ? 'Auto Narration' : 'Manual Start'}
+          </span>
         </button>
 
         {/* Keyboard hint */}

@@ -1205,15 +1205,20 @@ body {
   border-radius: 6px;
 }
 
-.audio-btn--auto {
+.audio-btn--mode {
   width: auto;
   padding: 0 var(--space-md);
   gap: var(--space-xs);
 }
 
-.audio-btn-label {
-  font-size: 0.75rem;
-  font-weight: 500;
+.audio-mode-icon {
+  font-size: 0.95rem;
+}
+
+.audio-mode-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Speed display */
