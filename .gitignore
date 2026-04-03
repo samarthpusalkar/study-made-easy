@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 .sessions.json
+.esa-storage.json
 sample.txt
 .env
 .env.*

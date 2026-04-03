@@ -1,5 +1,9 @@
 const DEFAULT_OLLAMA_BASE_URL = (import.meta.env.VITE_OLLAMA_BASE_URL || '/api/ollama').replace(/\/$/, '');
 const DEFAULT_OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || 'openvoid/Void-Gemini';
+const DEFAULT_AUDIO_PREFERENCES = {
+  autoPlay: true,
+  speed: 1.25,
+};
 
 // ESA Configuration
 export const CONFIG = {
@@ -7,7 +11,8 @@ export const CONFIG = {
     name: 'ESA',
     fullName: 'Engaging Study Assistant',
     tagline: 'Study made easy',
-    storageKey: 'esa_saved_sessions',
+    storageKey: 'esa_app_store',
+    legacySessionStorageKey: 'esa_saved_sessions',
   },
 
   // Ollama settings
@@ -55,11 +60,15 @@ export const CONFIG = {
 
   // TTS settings
   tts: {
-    defaultSpeed: 1.25,
+    defaultSpeed: DEFAULT_AUDIO_PREFERENCES.speed,
     minSpeed: 0.75,
     maxSpeed: 2.0,
     speedStep: 0.25,
     preferredVoices: ['Google US English', 'Samantha', 'Alex', 'Daniel'],
+  },
+
+  preferences: {
+    audio: DEFAULT_AUDIO_PREFERENCES,
   },
 
   // Slide settings

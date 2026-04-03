@@ -2,18 +2,28 @@ import { useState, useEffect } from 'react';
 import { ttsService } from '../services/ttsService.js';
 import { CONFIG } from '../config.js';
 
-export default function AudioControls({ currentSlide, slides }) {
+export default function AudioControls({
+  currentSlide,
+  slides,
+  audioPreferences,
+  onAudioPreferencesChange,
+}) {
+  const autoPlay = audioPreferences?.autoPlay ?? CONFIG.preferences.audio.autoPlay;
+  const currentSpeed = audioPreferences?.speed ?? CONFIG.preferences.audio.speed;
   const [ttsState, setTtsState] = useState({
     isSpeaking: false,
     isPaused: false,
-    speed: CONFIG.tts.defaultSpeed,
+    speed: currentSpeed,
   });
-  const [autoPlay, setAutoPlay] = useState(true);
 
   useEffect(() => {
     ttsService.onStateChange = setTtsState;
     return () => { ttsService.onStateChange = null; };
   }, []);
+
+  useEffect(() => {
+    ttsService.setSpeed(currentSpeed);
+  }, [currentSpeed]);
 
   const handlePlayPause = () => {
     if (ttsState.isSpeaking) {
@@ -33,8 +43,13 @@ export default function AudioControls({ currentSlide, slides }) {
   };
 
   const handleSpeedChange = (delta) => {
-    const newSpeed = ttsState.speed + delta;
+    const newSpeed = Math.max(
+      CONFIG.tts.minSpeed,
+      Math.min(CONFIG.tts.maxSpeed, currentSpeed + delta)
+    );
+
     ttsService.setSpeed(newSpeed);
+    onAudioPreferencesChange?.({ speed: newSpeed });
   };
 
   // Auto-play narration when slide changes
@@ -76,15 +91,15 @@ export default function AudioControls({ currentSlide, slides }) {
           <button
             className="audio-btn audio-btn--sm"
             onClick={() => handleSpeedChange(-CONFIG.tts.speedStep)}
-            disabled={ttsState.speed <= CONFIG.tts.minSpeed}
+            disabled={currentSpeed <= CONFIG.tts.minSpeed}
           >
             −
           </button>
-          <span className="audio-speed-label">{ttsState.speed.toFixed(2)}×</span>
+          <span className="audio-speed-label">{currentSpeed.toFixed(2)}×</span>
           <button
             className="audio-btn audio-btn--sm"
             onClick={() => handleSpeedChange(CONFIG.tts.speedStep)}
-            disabled={ttsState.speed >= CONFIG.tts.maxSpeed}
+            disabled={currentSpeed >= CONFIG.tts.maxSpeed}
           >
             +
           </button>
@@ -102,7 +117,7 @@ export default function AudioControls({ currentSlide, slides }) {
         {/* Auto-play toggle */}
         <button
           className={`audio-btn audio-btn--mode ${autoPlay ? 'audio-btn--active' : ''}`}
-          onClick={() => setAutoPlay(!autoPlay)}
+          onClick={() => onAudioPreferencesChange?.({ autoPlay: !autoPlay })}
           title={
             autoPlay
               ? 'Narration starts automatically on each slide. Click to switch to manual mode.'

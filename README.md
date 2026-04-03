@@ -114,7 +114,8 @@ public/          public assets such as icons
 
 ## Privacy
 
-- Sessions are stored in the browser with `localStorage`
+- Sessions and user preferences are cached in the browser with `localStorage`
+- When the local Vite server is running, the app also syncs to an ignored `.esa-storage.json` file on disk
 - The repo no longer writes study sessions to a tracked file
 - There are no API keys checked into this project
 - If you paste sensitive notes into the app, treat them as local browser data on that machine
