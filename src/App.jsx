@@ -6,6 +6,7 @@ import SlideViewer from './components/SlideViewer.jsx';
 import ChatSidebar from './components/ChatSidebar.jsx';
 import AudioControls from './components/AudioControls.jsx';
 import LibraryView from './components/LibraryView.jsx';
+import { CONFIG } from './config.js';
 import { processDocument } from './pipeline/contentPipeline.js';
 import { checkOllamaStatus } from './services/ollamaService.js';
 import { ttsService } from './services/ttsService.js';
@@ -22,52 +23,33 @@ export default function App() {
   const [error, setError] = useState(null);
   const [ollamaStatus, setOllamaStatus] = useState(null);
 
-  const persistSessions = useCallback(async (updated) => {
-    localStorage.setItem('esa_saved_sessions', JSON.stringify(updated));
+  const persistSessions = useCallback((updated) => {
     try {
-      await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated)
-      });
+      localStorage.setItem(CONFIG.app.storageKey, JSON.stringify(updated));
     } catch (e) {
-      console.error('API save failed', e);
+      console.error('Failed to save sessions locally', e);
     }
   }, []);
 
-  // Load sessions from API or local storage on mount
+  // Load sessions from local storage on mount
   useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        const res = await fetch('/api/sessions');
-        if (res.ok) {
-          const parsed = await res.json();
-          if (Array.isArray(parsed)) {
-            setSavedSessions(parsed);
-            return;
-          }
-        }
-      } catch {
-        console.warn('API load failed, falling back to localStorage');
-      }
-
-      const sessionsJson = localStorage.getItem('esa_saved_sessions');
+    const loadSessions = () => {
+      const sessionsJson = localStorage.getItem(CONFIG.app.storageKey);
       if (sessionsJson) {
         try {
           const parsed = JSON.parse(sessionsJson);
           if (Array.isArray(parsed)) {
             setSavedSessions(parsed);
-            persistSessions(parsed); // migrate to API
           }
         } catch (e) {
           console.error('Failed to load saved sessions', e);
         }
       }
     };
-    
-    fetchSessions();
+
+    loadSessions();
     checkOllamaStatus().then(setOllamaStatus);
-  }, [persistSessions]);
+  }, []);
 
   // Save changes to current session if it exists & slides change (e.g., gap slides added)
   useEffect(() => {
@@ -228,7 +210,7 @@ export default function App() {
             <span>⚠️</span>
             <span>{ollamaStatus.error}</span>
             <span className="status-hint">
-              Run <code>ollama serve</code> and <code>ollama pull mistral</code> to get started.
+              Run <code>ollama serve</code> and <code>ollama pull {CONFIG.ollama.model}</code> to get started.
             </span>
           </div>
         )}
@@ -236,6 +218,9 @@ export default function App() {
           <div className="status-banner status-banner--warning">
             <span>⚠️</span>
             <span>{ollamaStatus.error}</span>
+            <span className="status-hint">
+              Pull it with <code>ollama pull {CONFIG.ollama.model}</code>.
+            </span>
           </div>
         )}
 

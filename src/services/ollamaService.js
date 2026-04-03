@@ -1,9 +1,7 @@
 // Ollama LLM Service — handles all AI interactions
 import { CONFIG } from '../config.js';
 
-// Use Vite proxy in dev to avoid CORS issues
-const OLLAMA_URL = import.meta.env.DEV ? '' : CONFIG.ollama.baseUrl;
-const OLLAMA_PATH = import.meta.env.DEV ? '/api/ollama' : '';
+const OLLAMA_BASE_URL = CONFIG.ollama.baseUrl;
 const MODEL = CONFIG.ollama.model;
 
 /**
@@ -39,7 +37,7 @@ function extractJSON(text) {
 }
 
 async function chatCompletion(messages, options = {}) {
-  const url = `${OLLAMA_URL}${OLLAMA_PATH}/api/chat`;
+  const url = `${OLLAMA_BASE_URL}/api/chat`;
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -69,7 +67,7 @@ async function chatCompletion(messages, options = {}) {
  */
 export async function checkOllamaStatus() {
   try {
-    const url = `${OLLAMA_URL}${OLLAMA_PATH}/api/tags`;
+    const url = `${OLLAMA_BASE_URL}/api/tags`;
     const res = await fetch(url);
     if (!res.ok) return { available: false, error: 'Ollama not responding' };
     const data = await res.json();
@@ -82,7 +80,10 @@ export async function checkOllamaStatus() {
       error: hasModel ? null : `Model "${MODEL}" not found. Available: ${models.join(', ')}`,
     };
   } catch {
-    return { available: false, error: 'Cannot connect to Ollama at ' + OLLAMA_URL };
+    return {
+      available: false,
+      error: `Cannot connect to the Ollama endpoint at ${OLLAMA_BASE_URL}.`,
+    };
   }
 }
 

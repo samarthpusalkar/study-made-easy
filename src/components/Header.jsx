@@ -8,7 +8,7 @@ export default function Header({ mode, view, onNewSession, onOpenLibrary }) {
       <div className="header-left">
         <div className="header-logo">
           <span className="logo-icon">📖✨</span>
-          <span className="logo-text">ESA</span>
+          <span className="logo-text">{CONFIG.app.name}</span>
         </div>
       </div>
 

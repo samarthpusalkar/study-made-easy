@@ -1,9 +1,19 @@
+const DEFAULT_OLLAMA_BASE_URL = (import.meta.env.VITE_OLLAMA_BASE_URL || '/api/ollama').replace(/\/$/, '');
+const DEFAULT_OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL || 'mistral';
+
 // ESA Configuration
 export const CONFIG = {
+  app: {
+    name: 'ESA',
+    fullName: 'Engaging Study Assistant',
+    tagline: 'Study made easy',
+    storageKey: 'esa_saved_sessions',
+  },
+
   // Ollama settings
   ollama: {
-    baseUrl: 'http://localhost:11434',
-    model: 'qwen3-coder-next:cloud',
+    baseUrl: DEFAULT_OLLAMA_BASE_URL,
+    model: DEFAULT_OLLAMA_MODEL,
     maxTokens: 8192,
     temperature: 0.7,
   },

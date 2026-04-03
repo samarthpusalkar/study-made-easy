@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup:ollama": "bash ./scripts/setup-ollama.sh"
   },
   "dependencies": {
     "lorem-ipsum": "^2.0.8",
