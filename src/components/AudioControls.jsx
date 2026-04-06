@@ -67,73 +67,77 @@ export default function AudioControls({
   return (
     <div className="audio-controls">
       <div className="audio-controls-inner">
-        {/* Play/Pause */}
-        <button
-          className={`audio-btn audio-btn--play ${ttsState.isSpeaking ? 'audio-btn--active' : ''}`}
-          onClick={handlePlayPause}
-          title={ttsState.isSpeaking ? (ttsState.isPaused ? 'Resume' : 'Pause') : 'Play narration'}
-        >
-          {ttsState.isSpeaking ? (ttsState.isPaused ? '▶' : '⏸') : '▶'}
-        </button>
-
-        {/* Stop */}
-        <button
-          className="audio-btn"
-          onClick={handleStop}
-          disabled={!ttsState.isSpeaking}
-          title="Stop"
-        >
-          ⏹
-        </button>
-
-        {/* Speed controls */}
-        <div className="audio-speed">
+        <div className="audio-controls-group audio-controls-group--transport">
+          {/* Play/Pause */}
           <button
-            className="audio-btn audio-btn--sm"
-            onClick={() => handleSpeedChange(-CONFIG.tts.speedStep)}
-            disabled={currentSpeed <= CONFIG.tts.minSpeed}
+            className={`audio-btn audio-btn--play ${ttsState.isSpeaking ? 'audio-btn--active' : ''}`}
+            onClick={handlePlayPause}
+            title={ttsState.isSpeaking ? (ttsState.isPaused ? 'Resume' : 'Pause') : 'Play narration'}
           >
-            −
+            {ttsState.isSpeaking ? (ttsState.isPaused ? '▶' : '⏸') : '▶'}
           </button>
-          <span className="audio-speed-label">{currentSpeed.toFixed(2)}×</span>
+
+          {/* Stop */}
           <button
-            className="audio-btn audio-btn--sm"
-            onClick={() => handleSpeedChange(CONFIG.tts.speedStep)}
-            disabled={currentSpeed >= CONFIG.tts.maxSpeed}
+            className="audio-btn"
+            onClick={handleStop}
+            disabled={!ttsState.isSpeaking}
+            title="Stop"
           >
-            +
+            ⏹
           </button>
+
+          {/* Speed controls */}
+          <div className="audio-speed">
+            <button
+              className="audio-btn audio-btn--sm"
+              onClick={() => handleSpeedChange(-CONFIG.tts.speedStep)}
+              disabled={currentSpeed <= CONFIG.tts.minSpeed}
+            >
+              −
+            </button>
+            <span className="audio-speed-label">{currentSpeed.toFixed(2)}×</span>
+            <button
+              className="audio-btn audio-btn--sm"
+              onClick={() => handleSpeedChange(CONFIG.tts.speedStep)}
+              disabled={currentSpeed >= CONFIG.tts.maxSpeed}
+            >
+              +
+            </button>
+          </div>
+
+          {/* Waveform animation */}
+          <div className={`audio-wave ${ttsState.isSpeaking && !ttsState.isPaused ? 'audio-wave--active' : ''}`}>
+            <span className="wave-bar" />
+            <span className="wave-bar" />
+            <span className="wave-bar" />
+            <span className="wave-bar" />
+            <span className="wave-bar" />
+          </div>
         </div>
 
-        {/* Waveform animation */}
-        <div className={`audio-wave ${ttsState.isSpeaking && !ttsState.isPaused ? 'audio-wave--active' : ''}`}>
-          <span className="wave-bar" />
-          <span className="wave-bar" />
-          <span className="wave-bar" />
-          <span className="wave-bar" />
-          <span className="wave-bar" />
+        <div className="audio-controls-group audio-controls-group--preferences">
+          {/* Auto-play toggle */}
+          <button
+            className={`audio-btn audio-btn--mode ${autoPlay ? 'audio-btn--active' : ''}`}
+            onClick={() => onAudioPreferencesChange?.({ autoPlay: !autoPlay })}
+            title={
+              autoPlay
+                ? 'Narration starts automatically on each slide. Click to switch to manual mode.'
+                : 'Narration starts only when you press play. Click to switch to auto mode.'
+            }
+          >
+            <span className="audio-mode-icon" aria-hidden="true">
+              {autoPlay ? '🔊' : '▶'}
+            </span>
+            <span className="audio-mode-label">
+              {autoPlay ? 'Auto Narration' : 'Manual Start'}
+            </span>
+          </button>
+
+          {/* Keyboard hint */}
+          <span className="audio-hint">Press <kbd>Space</kbd> to play/pause</span>
         </div>
-
-        {/* Auto-play toggle */}
-        <button
-          className={`audio-btn audio-btn--mode ${autoPlay ? 'audio-btn--active' : ''}`}
-          onClick={() => onAudioPreferencesChange?.({ autoPlay: !autoPlay })}
-          title={
-            autoPlay
-              ? 'Narration starts automatically on each slide. Click to switch to manual mode.'
-              : 'Narration starts only when you press play. Click to switch to auto mode.'
-          }
-        >
-          <span className="audio-mode-icon" aria-hidden="true">
-            {autoPlay ? '🔊' : '▶'}
-          </span>
-          <span className="audio-mode-label">
-            {autoPlay ? 'Auto Narration' : 'Manual Start'}
-          </span>
-        </button>
-
-        {/* Keyboard hint */}
-        <span className="audio-hint">Press <kbd>Space</kbd> to play/pause</span>
       </div>
     </div>
   );

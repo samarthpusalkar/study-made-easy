@@ -92,20 +92,19 @@ export default function SlideViewer({ slides, currentSlide, onSlideChange, onTog
 
           {slide.selfTestQuestion && (
             <div className="slide-self-test">
-              <div style={{ fontWeight: 600, marginBottom: '8px' }}>{slide.selfTestQuestion}</div>
+              <div className="slide-self-test-question">{slide.selfTestQuestion}</div>
               {!evaluation ? (
-                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                  <input 
-                    type="text" 
-                    value={userAnswer} 
+                <div className="slide-self-test-form">
+                  <input
+                    type="text"
+                    value={userAnswer}
                     onChange={(e) => setUserAnswer(e.target.value)}
                     placeholder="Type your answer..."
-                    className="text-input"
-                    style={{ minHeight: '40px', padding: '8px', flex: 1 }}
+                    className="text-input slide-self-test-input"
                     onKeyDown={(e) => { if(e.key === 'Enter') handleCheckAnswer(slide); }}
                   />
-                  <button 
-                    className="header-btn" 
+                  <button
+                    className="header-btn slide-self-test-action"
                     onClick={() => handleCheckAnswer(slide)}
                     disabled={isEvaluating || !userAnswer.trim()}
                   >
@@ -113,9 +112,9 @@ export default function SlideViewer({ slides, currentSlide, onSlideChange, onTog
                   </button>
                 </div>
               ) : (
-                <div style={{ marginTop: '8px', padding: '12px', background: 'rgba(124, 92, 252, 0.1)', borderRadius: '8px', borderLeft: '4px solid #7c5cfc' }}>
-                  <div style={{ fontSize: '0.9rem' }}>{evaluation}</div>
-                  <button className="header-btn" style={{ marginTop: '8px' }} onClick={() => { setEvaluation(null); setUserAnswer(''); }}>Try Again</button>
+                <div className="slide-self-test-feedback">
+                  <div>{evaluation}</div>
+                  <button className="header-btn slide-self-test-action" onClick={() => { setEvaluation(null); setUserAnswer(''); }}>Try Again</button>
                 </div>
               )}
             </div>

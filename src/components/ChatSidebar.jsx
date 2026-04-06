@@ -138,7 +138,7 @@ export default function ChatSidebar({ isOpen, currentSlide, slides, onInsertSlid
                 <span className="chat-msg-badge">📌 New slide added</span>
               )}
               {msg.proposal && (
-                <div className="chat-proposal-actions" style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+                <div className="chat-proposal-actions">
                   <button className="header-btn" onClick={() => handleInsertGapSlide(msg.proposal, i, 'before')}>Insert Before</button>
                   <button className="header-btn" onClick={() => handleInsertGapSlide(msg.proposal, i, 'after')}>Insert After</button>
                 </div>
