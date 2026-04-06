@@ -1,6 +1,6 @@
 // Content Pipeline — orchestrates the full document → slides workflow
 import { parseDocument } from '../services/documentParser.js';
-import { scoreComplexity, simplifyContent, generateSlideContent } from '../services/ollamaService.js';
+import { scoreComplexity, simplifyContent, generateSlideContent, summarizeNarrativeContext } from '../services/ollamaService.js';
 import { searchConcept } from '../services/searchService.js';
 import { CONFIG } from '../config.js';
 
@@ -61,9 +61,21 @@ export async function processDocument(input, mode, onProgress) {
 
   progress('enriching', 'Content enrichment complete', 65);
 
-  // Step 4: Generate slides
+  // Step 4: Generate slides (sequentially to maintain narration continuity)
+  //
+  // Two-tier narrative memory:
+  //   - narrativeSummary (long-term): compressed summary of all slides before the buffer window
+  //   - unsummarizedScripts (short-term buffer): raw scripts since last summarization
+  //
+  // When the buffer exceeds CONFIG.narrative.contextCharThreshold, we call the LLM to
+  // compress (existing summary + buffer) into a new summary, then clear the buffer.
+  // This keeps context size bounded while preserving the full lecture arc.
   progress('generating', 'Creating presentation slides...', 70);
   const slides = [];
+  let narrativeSummary = '';           // compressed history of all earlier slides
+  let unsummarizedScripts = [];        // recent {title, script} entries not yet summarized
+  let unsummarizedCharCount = 0;       // running char count of the buffer
+  const charThreshold = CONFIG.narrative.contextCharThreshold;
 
   for (let i = 0; i < enrichedSections.length; i++) {
     const section = enrichedSections[i];
@@ -75,8 +87,37 @@ export async function processDocument(input, mode, onProgress) {
       percentInStep
     );
 
-    const slide = await generateSlideContent(section, mode);
+    // Build narrative context — short-term (previous slide) + long-term (summary)
+    const previousSlide = slides.length > 0 ? slides[slides.length - 1] : null;
+    const narrativeContext = {
+      slideIndex: i,
+      totalSlides: enrichedSections.length,
+      previousSlideScript: previousSlide ? previousSlide.speakerNotes : null,
+      previousSlideTitle: previousSlide ? previousSlide.title : null,
+      narrativeSummary: narrativeSummary || null,
+    };
+
+    const slide = await generateSlideContent(section, mode, narrativeContext);
     slides.push(slide);
+
+    // Accumulate this slide's script into the unsummarized buffer
+    const script = slide.speakerNotes || '';
+    if (script) {
+      unsummarizedScripts.push({ title: slide.title, script });
+      unsummarizedCharCount += script.length;
+    }
+
+    // If the buffer exceeds the threshold, compress it into the running summary
+    if (unsummarizedCharCount > charThreshold) {
+      progress(
+        'generating',
+        `Compressing lecture context (${slides.length} slides so far)...`,
+        percentInStep
+      );
+      narrativeSummary = await summarizeNarrativeContext(narrativeSummary, unsummarizedScripts);
+      unsummarizedScripts = [];
+      unsummarizedCharCount = 0;
+    }
   }
 
   progress('generating', 'All slides generated!', 95);

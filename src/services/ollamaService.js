@@ -160,9 +160,60 @@ Respond with the simplified content only, no preamble.`;
 }
 
 /**
- * Generate slide content from a processed section
+ * Summarize accumulated narrative context into a concise summary.
+ * Called by the pipeline when unsummarized scripts exceed the char threshold.
+ * @param {string} existingSummary - The current running summary (empty string if first summarization)
+ * @param {string[]} recentScripts - Array of {title, script} entries since last summarization
+ * @returns {Promise<string>} Condensed narrative summary
  */
-export async function generateSlideContent(section, mode) {
+export async function summarizeNarrativeContext(existingSummary, recentScripts) {
+  const scriptBlock = recentScripts
+    .map((s) => `[${s.title}]: ${s.script}`)
+    .join('\n\n');
+
+  const priorContext = existingSummary
+    ? `Previous lecture summary:\n"""\n${existingSummary}\n"""\n\n`
+    : '';
+
+  const prompt = `You are summarizing the narrative arc of an ongoing lecture for internal use by an AI slide generator.
+
+${priorContext}New slides since last summary:
+"""
+${scriptBlock}
+"""
+
+Write a concise summary (max 200 words) that captures:
+1. The key concepts and topics covered so far, in order
+2. The narrative thread / flow of the lecture
+3. The last topic discussed and where the lecturer left off
+
+This summary will be used to help generate the NEXT slides so the lecture feels continuous. Be factual and dense — no filler. Respond with ONLY the summary text, nothing else.`;
+
+  try {
+    const response = await chatCompletion([{ role: 'user', content: prompt }], {
+      temperature: 0.3,
+      maxTokens: CONFIG.narrative.summaryMaxTokens,
+    });
+    return response.trim();
+  } catch (err) {
+    console.error('[ESA] Narrative summarization failed:', err);
+    // Fallback: just use the existing summary or empty string
+    return existingSummary || '';
+  }
+}
+
+/**
+ * Generate slide content from a processed section
+ * @param {object} section - The content section to convert
+ * @param {string} mode - The study mode
+ * @param {object} narrativeContext - Context for narration continuity
+ * @param {number} narrativeContext.slideIndex - 0-based index of this slide
+ * @param {number} narrativeContext.totalSlides - Total number of slides being generated
+ * @param {string|null} narrativeContext.previousSlideScript - Speaker notes from the immediately previous slide
+ * @param {string|null} narrativeContext.previousSlideTitle - Title of the immediately previous slide
+ * @param {string|null} narrativeContext.narrativeSummary - Compressed summary of ALL earlier slides (long-term memory)
+ */
+export async function generateSlideContent(section, mode, narrativeContext = {}) {
   const modeConfig = CONFIG.modes[mode];
   const selfTestLine = modeConfig.includeSelfTest
     ? '- Include ONE self-test question at the end (start with "🤔 ")'
@@ -171,13 +222,47 @@ export async function generateSlideContent(section, mode) {
     ? '- Include a brief real-world example or analogy'
     : '- Do NOT include examples or analogies';
 
+  const {
+    slideIndex = 0,
+    totalSlides = 1,
+    previousSlideScript = null,
+    previousSlideTitle = null,
+    narrativeSummary = null,
+  } = narrativeContext;
+  const isFirstSlide = slideIndex === 0;
+  const isLastSlide = slideIndex === totalSlides - 1;
+  const maxPrevChars = CONFIG.narrative.previousSlideContextChars;
+
+  // Build the narration continuity instruction based on slide position
+  let narrationInstruction;
+  if (isFirstSlide) {
+    narrationInstruction = `- Speaker Notes: This is the FIRST slide of the lecture. Write a warm, engaging opening that welcomes the student, briefly introduces the overall topic, and then dives into this slide's content. Set the tone for the entire lecture. Make it sound like a true, passionate lecturer beginning a class.`;
+  } else {
+    // Short-term memory: tail of previous slide's script
+    const prevScriptTail = previousSlideScript
+      ? previousSlideScript.slice(-maxPrevChars)
+      : '';
+
+    // Long-term memory: compressed summary of all earlier slides
+    const summaryBlock = narrativeSummary
+      ? '\n- LECTURE SUMMARY SO FAR (topics already covered — do not repeat introductions for these):\n"""' + narrativeSummary + '"""'
+      : '';
+
+    const lastSlideNote = isLastSlide
+      ? '\n- This is the LAST slide. End with a brief, encouraging wrap-up summarizing what was covered across the lecture.'
+      : '';
+
+    narrationInstruction = '- Speaker Notes: This is slide ' + (slideIndex + 1) + ' of ' + totalSlides + ' in an ongoing lecture. You are CONTINUING a lecture already in progress -- do NOT start with "Welcome", "Hello", "Today we will learn", or any introductory greeting. Instead, use a smooth transition from the previous slide (titled: "' + (previousSlideTitle || 'previous topic') + '"). Pick up where the lecturer left off and naturally bridge into this new concept. The narration should feel like one continuous, flowing lecture.' + summaryBlock + '\n- Here is the END of the previous slide\'s narration for context (continue from here):\n"""' + prevScriptTail + '"""' + lastSlideNote;
+  }
+
 const prompt = `You MUST respond with ONLY valid JSON, no other text. Convert this educational content into a presentation slide.
 
 Rules:
 - Title: Short, descriptive (max 8 words)
 - Bullet points: Max ${CONFIG.slides.maxBulletPoints} bullets, each 1-2 sentences. Do NOT cram everything into bullets.
 - Use emoji at the start of each bullet for visual clarity
-- Speaker Notes: This is CRITICAL. Write a comprehensive, engaging lecture script that fully explains the concept, introduces it properly without abruptness, provides detailed analogies and examples, and explicitly expands on the bullets. Make it sound like a true, passionate lecturer. Do not just read the bullets.
+${narrationInstruction}
+- The speaker notes must provide detailed analogies and examples, and explicitly expand on the bullets. Do not just read the bullets.
 ${exampleLine}
 ${selfTestLine}
 

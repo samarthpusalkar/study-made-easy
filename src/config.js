@@ -78,6 +78,16 @@ export const CONFIG = {
     newSlideConfidenceThreshold: 0.9,
   },
 
+  // Narrative continuity — rolling summarization for scalable context
+  narrative: {
+    // When accumulated unsummarized scripts exceed this char count, trigger a summarization call
+    contextCharThreshold: 2000,
+    // Max tokens the summarization LLM call can return
+    summaryMaxTokens: 256,
+    // Max chars of the immediate previous slide's script to include verbatim (short-term memory)
+    previousSlideContextChars: 600,
+  },
+
   // Search settings
   search: {
     maxResults: 3,
