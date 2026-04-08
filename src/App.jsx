@@ -95,13 +95,13 @@ export default function App() {
       switch (e.code) {
         case 'Space':
           e.preventDefault();
-          if (ttsService.isSpeaking || ttsService.isPaused) {
-            ttsService.toggle();
+          if (ttsService.lecture.isSpeaking || ttsService.lecture.isPaused) {
+            ttsService.toggleLecture();
           } else {
             const slide = slides[currentSlide];
             if (slide) {
               const text = slide.speakerNotes || `${slide.title}. ${slide.bullets.join('. ')}`;
-              ttsService.speak(text).catch(() => {});
+              ttsService.speakLecture(text);
             }
           }
           break;
@@ -182,7 +182,7 @@ export default function App() {
   }, []);
 
   const handleNewSession = useCallback(() => {
-    ttsService.stop();
+    ttsService.stopAll();
     setView('upload');
     setSlides([]);
     setCurrentSessionId(null);

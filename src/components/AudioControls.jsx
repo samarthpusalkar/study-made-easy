@@ -10,36 +10,44 @@ export default function AudioControls({
 }) {
   const autoPlay = audioPreferences?.autoPlay ?? CONFIG.preferences.audio.autoPlay;
   const currentSpeed = audioPreferences?.speed ?? CONFIG.preferences.audio.speed;
-  const [ttsState, setTtsState] = useState({
+  const [lectureState, setLectureState] = useState({
     isSpeaking: false,
     isPaused: false,
     speed: currentSpeed,
   });
 
+  // Subscribe to lecture channel state only
   useEffect(() => {
-    ttsService.onStateChange = setTtsState;
-    return () => { ttsService.onStateChange = null; };
+    ttsService.onLectureStateChange = setLectureState;
+    return () => { ttsService.onLectureStateChange = null; };
   }, []);
 
+  // Sync speed to TTS service when preference changes
   useEffect(() => {
     ttsService.setSpeed(currentSpeed);
   }, [currentSpeed]);
 
+  const _getSlideText = () => {
+    const slide = slides[currentSlide];
+    if (!slide) return null;
+    return slide.speakerNotes || `${slide.title}. ${slide.bullets.join('. ')}`;
+  };
+
   const handlePlayPause = () => {
-    if (ttsState.isSpeaking) {
-      ttsService.toggle();
+    if (lectureState.isSpeaking || lectureState.isPaused) {
+      // Currently speaking or paused → toggle
+      ttsService.toggleLecture();
     } else {
-      // Start speaking current slide
-      const slide = slides[currentSlide];
-      if (slide) {
-        const text = slide.speakerNotes || `${slide.title}. ${slide.bullets.join('. ')}`;
-        ttsService.speak(text).catch(() => {});
+      // Not speaking → start lecture narration
+      const text = _getSlideText();
+      if (text) {
+        ttsService.speakLecture(text);
       }
     }
   };
 
   const handleStop = () => {
-    ttsService.stop();
+    ttsService.stopLecture();
   };
 
   const handleSpeedChange = (delta) => {
@@ -48,21 +56,40 @@ export default function AudioControls({
       Math.min(CONFIG.tts.maxSpeed, currentSpeed + delta)
     );
 
+    // setSpeed immediately restarts the utterance at the new rate
     ttsService.setSpeed(newSpeed);
     onAudioPreferencesChange?.({ speed: newSpeed });
   };
 
-  // Auto-play narration when slide changes
+  // Auto-play narration when slide changes (only on lecture channel)
   useEffect(() => {
     if (autoPlay && slides[currentSlide]) {
       const slide = slides[currentSlide];
       const text = slide.speakerNotes || `${slide.title}. ${slide.bullets.join('. ')}`;
-      ttsService.stop();
+      ttsService.stopLecture();
       setTimeout(() => {
-        ttsService.speak(text).catch(() => {});
+        ttsService.speakLecture(text);
       }, 400);
     }
   }, [currentSlide, autoPlay, slides]);
+
+  // When autoPlay is toggled OFF, stop current lecture narration immediately
+  // When toggled ON, start narrating current slide
+  const handleAutoPlayToggle = () => {
+    const newAutoPlay = !autoPlay;
+    onAudioPreferencesChange?.({ autoPlay: newAutoPlay });
+
+    if (!newAutoPlay) {
+      // Switching to manual — stop any active lecture narration
+      ttsService.stopLecture();
+    }
+    // If switching to auto, the autoPlay useEffect above will fire and start narration
+  };
+
+  // Determine button icon — always reflects lecture state, never chat
+  const showPause = lectureState.isSpeaking && !lectureState.isPaused;
+  const showPlay = !lectureState.isSpeaking || lectureState.isPaused;
+  const isActive = lectureState.isSpeaking || lectureState.isPaused;
 
   return (
     <div className="audio-controls">
@@ -70,18 +97,18 @@ export default function AudioControls({
         <div className="audio-controls-group audio-controls-group--transport">
           {/* Play/Pause */}
           <button
-            className={`audio-btn audio-btn--play ${ttsState.isSpeaking ? 'audio-btn--active' : ''}`}
+            className={`audio-btn audio-btn--play ${isActive ? 'audio-btn--active' : ''}`}
             onClick={handlePlayPause}
-            title={ttsState.isSpeaking ? (ttsState.isPaused ? 'Resume' : 'Pause') : 'Play narration'}
+            title={showPause ? 'Pause narration' : lectureState.isPaused ? 'Resume narration' : 'Play narration'}
           >
-            {ttsState.isSpeaking ? (ttsState.isPaused ? '▶' : '⏸') : '▶'}
+            {showPause ? '⏸' : '▶'}
           </button>
 
           {/* Stop */}
           <button
             className="audio-btn"
             onClick={handleStop}
-            disabled={!ttsState.isSpeaking}
+            disabled={!isActive}
             title="Stop"
           >
             ⏹
@@ -107,7 +134,7 @@ export default function AudioControls({
           </div>
 
           {/* Waveform animation */}
-          <div className={`audio-wave ${ttsState.isSpeaking && !ttsState.isPaused ? 'audio-wave--active' : ''}`}>
+          <div className={`audio-wave ${showPause ? 'audio-wave--active' : ''}`}>
             <span className="wave-bar" />
             <span className="wave-bar" />
             <span className="wave-bar" />
@@ -120,7 +147,7 @@ export default function AudioControls({
           {/* Auto-play toggle */}
           <button
             className={`audio-btn audio-btn--mode ${autoPlay ? 'audio-btn--active' : ''}`}
-            onClick={() => onAudioPreferencesChange?.({ autoPlay: !autoPlay })}
+            onClick={handleAutoPlayToggle}
             title={
               autoPlay
                 ? 'Narration starts automatically on each slide. Click to switch to manual mode.'

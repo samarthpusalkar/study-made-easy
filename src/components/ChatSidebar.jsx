@@ -13,8 +13,15 @@ export default function ChatSidebar({ isOpen, currentSlide, slides, onInsertSlid
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [chatTtsState, setChatTtsState] = useState({ isSpeaking: false, isPaused: false });
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Subscribe to chat channel TTS state
+  useEffect(() => {
+    ttsService.onChatStateChange = setChatTtsState;
+    return () => { ttsService.onChatStateChange = null; };
+  }, []);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -50,9 +57,9 @@ export default function ChatSidebar({ isOpen, currentSlide, slides, onInsertSlid
         },
       ]);
 
-      // Read answer aloud if TTS is enabled
+      // Read answer aloud on the CHAT channel (won't kill lecture, just pauses it)
       if (ttsEnabled) {
-        ttsService.speak(result.answer).catch(() => {});
+        ttsService.speakChat(result.answer).catch(() => {});
       }
 
       // Offer to insert new slide if LLM recommends it
@@ -101,6 +108,10 @@ export default function ChatSidebar({ isOpen, currentSlide, slides, onInsertSlid
     }
   };
 
+  const handleStopChatTts = () => {
+    ttsService.stopChat();
+  };
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -118,6 +129,16 @@ export default function ChatSidebar({ isOpen, currentSlide, slides, onInsertSlid
           <span className="chat-title">Study Q&A</span>
         </div>
         <div className="chat-header-right">
+          {/* Stop chat narration button — visible when chat is speaking */}
+          {chatTtsState.isSpeaking && (
+            <button
+              className="tts-toggle tts-toggle--stop"
+              onClick={handleStopChatTts}
+              title="Stop reading response"
+            >
+              ⏹
+            </button>
+          )}
           <button
             className={`tts-toggle ${ttsEnabled ? 'tts-toggle--on' : ''}`}
             onClick={() => setTtsEnabled(!ttsEnabled)}
@@ -159,6 +180,18 @@ export default function ChatSidebar({ isOpen, currentSlide, slides, onInsertSlid
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Chat speaking indicator bar */}
+      {chatTtsState.isSpeaking && (
+        <div className="chat-speaking-bar">
+          <div className="chat-speaking-wave">
+            <span className="wave-bar" />
+            <span className="wave-bar" />
+            <span className="wave-bar" />
+          </div>
+          <span className="chat-speaking-label">Reading response…</span>
+        </div>
+      )}
 
       <div className="chat-input-area">
         <textarea
